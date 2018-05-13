@@ -45,19 +45,22 @@ describe("PDFImage", function () {
   });
 
   it("should return correct convert command", function () {
-    expect(pdfImage.constructConvertCommandForPage(1))
-      .equal('convert "/tmp/test.pdf[1]" "/tmp/test-1.png"');
+    var convertCommand = pdfImage.constructConvertCommandForPage(1);
+    expect(convertCommand.cmd).equal("convert");
+    expect(convertCommand.args.length).equal(2);
   });
 
   it("should return correct convert command to combine images", function () {
-    expect(pdfImage.constructCombineCommandForFile(['/tmp/test-0.png', '/tmp/test-1.png']))
-      .equal('convert -append /tmp/test-0.png /tmp/test-1.png "/tmp/test.png"');
+    var cmdConfig = pdfImage.constructCombineCommandForFile(['/tmp/test-0.png', '/tmp/test-1.png']);
+    expect(cmdConfig.cmd).equal('convert');
+    expect(cmdConfig.args.length).equal(4);
   });
 
   it("should use gm when you ask it to", function () {
     pdfImage = new PDFImage(pdfPath, {graphicsMagick: true});
-    expect(pdfImage.constructConvertCommandForPage(1))
-      .equal('gm convert "/tmp/test.pdf[1]" "/tmp/test-1.png"');
+    var cmdConfig = pdfImage.constructConvertCommandForPage(1);
+    expect(cmdConfig.cmd).equal('gm convert');
+    expect(cmdConfig.args.length).equal(2);
   });
 
   // TODO: Do page updating test
@@ -69,7 +72,7 @@ describe("PDFImage", function () {
         generatedFiles.push(imagePath);
         resolve();
       }).catch(function(err){
-        reject(err);
+        reject(error.message + " " + error.stderr);
       });
     });
   });
@@ -82,7 +85,7 @@ describe("PDFImage", function () {
         generatedFiles.push(imagePath);
         resolve();
       }).catch(function(err){
-        reject(err);
+        reject(error.message + " " + error.stderr);
       });
     })
   });
@@ -96,7 +99,7 @@ describe("PDFImage", function () {
         generatedFiles.push(imagePath);
         resolve();
       }).catch(function(err){
-        reject(err);
+        reject(error.message + " " + error.stderr);
       });
     });
   });
@@ -110,7 +113,7 @@ describe("PDFImage", function () {
         });
         resolve();
       }).catch(function(err){
-        reject(err);
+        reject(error.message + " " + error.stderr);
       });
     });
   });
@@ -127,7 +130,7 @@ describe("PDFImage", function () {
         generatedFiles.push(imagePath);
         resolve();
       }).catch(function (error) {
-        reject(error);
+        reject(error.message + " " + error.stderr);
       });
     })
   });
@@ -138,7 +141,7 @@ describe("PDFImage", function () {
         expect(parseInt(numberOfPages)).to.be.equal(10);
         resolve();
       }).catch(function(err){
-        reject(err);
+        reject(error.message + " " + error.stderr);
       });
     });
   });
@@ -148,7 +151,28 @@ describe("PDFImage", function () {
       "-density": 300,
       "-trim": null
     });
-    expect(pdfImage.constructConvertOptions()).equal("-density 300 -trim");
+    expect(pdfImage.constructConvertOptions()[0]).equal("-density");
+    expect(pdfImage.constructConvertOptions()[1]).equal(300);
+    expect(pdfImage.constructConvertOptions()[2]).equal("-trim");
+  });
+
+  it("should convert all PDF's pages with convertOptions", function () {
+    return new Promise(function(resolve, reject){
+      pdfImage.setConvertOptions({
+        "-quality": 100,
+        "-trim": null
+      });
+
+      pdfImage.convertFile().then(function (images) {
+        images.forEach(function(image){
+          expect(fs.existsSync(image)).to.be.true;
+        });
+        generatedFiles = images;
+        resolve();
+      }).catch(function (error) {
+        reject(error.message + " " + error.stderr);
+      });
+    })
   });
 
   afterEach(function(done){
